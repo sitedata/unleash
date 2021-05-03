@@ -1,7 +1,6 @@
-'use strict';
+import { Projection } from './projection';
 
 const test = require('ava');
-const Projection = require('./projection');
 
 test('should return set empty if missing', t => {
     const projection = new Projection();

@@ -1,23 +1,22 @@
-'use strict';
+import moment from 'moment';
+import { ClientMetricsService, IClientApp } from './index';
 
 const test = require('ava');
-const moment = require('moment');
 const sinon = require('sinon');
 
 const { EventEmitter } = require('events');
-const UnleashClientMetrics = require('./index');
 
 const appName = 'appName';
 const instanceId = 'instanceId';
 
 const getLogger = require('../../../test/fixtures/no-logger');
 
+const createMetricsServce = cms =>
+    new ClientMetricsService(cms, null, null, null, null, null, getLogger);
+
 test('should work without state', t => {
     const clientMetricsStore = new EventEmitter();
-    const metrics = new UnleashClientMetrics(
-        { clientMetricsStore },
-        { getLogger },
-    );
+    const metrics = createMetricsServce(clientMetricsStore);
 
     t.truthy(metrics.getAppsWithToggles());
     t.truthy(metrics.getTogglesMetrics());
@@ -29,10 +28,7 @@ test.cb('data should expire', t => {
     const clock = sinon.useFakeTimers();
 
     const clientMetricsStore = new EventEmitter();
-    const metrics = new UnleashClientMetrics(
-        { clientMetricsStore },
-        { getLogger },
-    );
+    const metrics = createMetricsServce(clientMetricsStore);
 
     metrics.addPayload({
         appName,
@@ -73,10 +69,7 @@ test.cb('data should expire', t => {
 
 test('should listen to metrics from store', t => {
     const clientMetricsStore = new EventEmitter();
-    const metrics = new UnleashClientMetrics(
-        { clientMetricsStore },
-        { getLogger },
-    );
+    const metrics = createMetricsServce(clientMetricsStore);
     clientMetricsStore.emit('metrics', {
         appName,
         instanceId,
@@ -134,10 +127,7 @@ test('should listen to metrics from store', t => {
 
 test('should build up list of seen toggles when new metrics arrives', t => {
     const clientMetricsStore = new EventEmitter();
-    const metrics = new UnleashClientMetrics(
-        { clientMetricsStore },
-        { getLogger },
-    );
+    const metrics = createMetricsServce(clientMetricsStore);
     clientMetricsStore.emit('metrics', {
         appName,
         instanceId,
@@ -173,10 +163,7 @@ test('should build up list of seen toggles when new metrics arrives', t => {
 
 test('should handle a lot of toggles', t => {
     const clientMetricsStore = new EventEmitter();
-    const metrics = new UnleashClientMetrics(
-        { clientMetricsStore },
-        { getLogger },
-    );
+    const metrics = createMetricsServce(clientMetricsStore);
 
     const toggleCounts = {};
     for (let i = 0; i < 100; i++) {
@@ -203,10 +190,7 @@ test('should have correct values for lastMinute', t => {
     const clock = sinon.useFakeTimers();
 
     const clientMetricsStore = new EventEmitter();
-    const metrics = new UnleashClientMetrics(
-        { clientMetricsStore },
-        { getLogger },
-    );
+    const metrics = createMetricsServce(clientMetricsStore);
 
     const now = new Date();
     const input = [
@@ -278,10 +262,7 @@ test('should have correct values for lastHour', t => {
     const clock = sinon.useFakeTimers();
 
     const clientMetricsStore = new EventEmitter();
-    const metrics = new UnleashClientMetrics(
-        { clientMetricsStore },
-        { getLogger },
-    );
+    const metrics = createMetricsServce(clientMetricsStore);
 
     const now = new Date();
     const input = [
@@ -361,10 +342,7 @@ test('should have correct values for lastHour', t => {
 
 test('should not fail when toggle metrics is missing yes/no field', t => {
     const clientMetricsStore = new EventEmitter();
-    const metrics = new UnleashClientMetrics(
-        { clientMetricsStore },
-        { getLogger },
-    );
+    const metrics = createMetricsServce(clientMetricsStore);
     clientMetricsStore.emit('metrics', {
         appName,
         instanceId,
@@ -415,11 +393,16 @@ test('Multiple registrations of same appname and instanceid within same time per
     const clientInstanceStore = {
         bulkUpsert: bulkSpy,
     };
-    const clientMetrics = new UnleashClientMetrics(
-        { clientMetricsStore, clientApplicationsStore, clientInstanceStore },
-        { getLogger },
+    const clientMetrics = new ClientMetricsService(
+        clientMetricsStore,
+        null,
+        null,
+        clientApplicationsStore as any,
+        clientInstanceStore as any,
+        null,
+        getLogger,
     );
-    const client1 = {
+    const client1: IClientApp = {
         appName: 'test_app',
         instanceId: 'ava',
         strategies: [{ name: 'defaullt' }],
@@ -453,9 +436,14 @@ test('Multiple unique clients causes multiple registrations', async t => {
     const clientInstanceStore = {
         bulkUpsert: bulkSpy,
     };
-    const clientMetrics = new UnleashClientMetrics(
-        { clientMetricsStore, clientApplicationsStore, clientInstanceStore },
-        { getLogger },
+    const clientMetrics = new ClientMetricsService(
+        clientMetricsStore,
+        null,
+        null,
+        clientApplicationsStore as any,
+        clientInstanceStore as any,
+        null,
+        getLogger,
     );
     const client1 = {
         appName: 'test_app',
@@ -496,9 +484,15 @@ test('Same client registered outside of dedup interval will be registered twice'
         bulkUpsert: bulkSpy,
     };
     const bulkInterval = 2000;
-    const clientMetrics = new UnleashClientMetrics(
-        { clientMetricsStore, clientApplicationsStore, clientInstanceStore },
-        { getLogger, bulkInterval },
+    const clientMetrics = new ClientMetricsService(
+        clientMetricsStore,
+        null,
+        null,
+        clientApplicationsStore as any,
+        clientInstanceStore as any,
+        null,
+        getLogger,
+        bulkInterval,
     );
     const client1 = {
         appName: 'test_app',
@@ -536,9 +530,14 @@ test('No registrations during a time period will not call stores', async t => {
         bulkUpsert: bulkSpy,
     };
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const metrics = new UnleashClientMetrics(
-        { clientMetricsStore, clientApplicationsStore, clientInstanceStore },
-        { getLogger },
+    const metrics = new ClientMetricsService(
+        clientMetricsStore,
+        null,
+        null,
+        clientApplicationsStore as any,
+        clientInstanceStore as any,
+        null,
+        getLogger,
     );
     await clock.tickAsync(6 * 1000);
     t.is(appStoreSpy.callCount, 0);

@@ -1,8 +1,12 @@
+import {
+    ClientMetricsService,
+    IClientApp,
+} from '../../../lib/services/client-metrics';
+
 const test = require('ava');
 const faker = require('faker');
 const dbInit = require('../helpers/database-init');
 const getLogger = require('../../fixtures/no-logger');
-const ClientMetricsService = require('../../../lib/services/client-metrics');
 const { APPLICATION_CREATED } = require('../../../lib/types/events');
 
 let stores;
@@ -12,11 +16,17 @@ let clientMetricsService;
 test.before(async () => {
     db = await dbInit('client_metrics_service_serial', getLogger);
     stores = db.stores;
-    clientMetricsService = new ClientMetricsService(stores, {
+    clientMetricsService = new ClientMetricsService(
+        stores.clientMetricsStore,
+        stores.strategyStore,
+        stores.featureToggleStore,
+        stores.clientApplicationsStore,
+        stores.clientInstanceStore,
+        stores.eventStore,
         getLogger,
-        bulkInterval: 500,
-        announcementInterval: 2000,
-    });
+        500,
+        2000,
+    );
 });
 
 test.after(async () => {
@@ -24,7 +34,7 @@ test.after(async () => {
 });
 test.serial('Apps registered should be announced', async t => {
     t.plan(3);
-    const clientRegistration = {
+    const clientRegistration: IClientApp = {
         appName: faker.internet.domainName(),
         instanceId: faker.datatype.uuid(),
         strategies: ['default'],

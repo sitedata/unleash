@@ -1,9 +1,8 @@
-'use strict';
+import { ClientMetricsStore } from './client-metrics-store';
 
 const test = require('ava');
 const { EventEmitter } = require('events');
 const lolex = require('lolex');
-const ClientMetricStore = require('./client-metrics-store');
 const getLogger = require('../../test/fixtures/no-logger');
 
 function getMockDb() {
@@ -29,7 +28,7 @@ function getMockDb() {
 test.cb('should call database on startup', t => {
     const mock = getMockDb();
     const ee = new EventEmitter();
-    const store = new ClientMetricStore(mock, ee, getLogger);
+    const store = new ClientMetricsStore(mock as any, ee, getLogger);
 
     t.plan(2);
 
@@ -48,7 +47,7 @@ test.cb('should start poller even if inital database fetch fails', t => {
     const mock = getMockDb();
     mock.getMetricsLastHour = () => Promise.reject(new Error('oops'));
     const ee = new EventEmitter();
-    const store = new ClientMetricStore(mock, ee, getLogger, 100);
+    const store = new ClientMetricsStore(mock as any, ee, getLogger, 100);
 
     const metrics = [];
     store.on('metrics', m => metrics.push(m));
@@ -71,7 +70,7 @@ test.cb('should poll for updates', t => {
 
     const mock = getMockDb();
     const ee = new EventEmitter();
-    const store = new ClientMetricStore(mock, ee, getLogger, 100);
+    const store = new ClientMetricsStore(mock as any, ee, getLogger, 100);
 
     const metrics = [];
     store.on('metrics', m => metrics.push(m));
